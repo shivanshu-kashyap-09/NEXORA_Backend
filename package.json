@@ -1,0 +1,43 @@
+{
+  "name": "nexora_backend",
+  "version": "1.0.0",
+  "description": "NEXORA is an enterprise-grade, multi-tenant order orchestration and fulfillment engine designed for modern e-commerce networks and marketplace facilitators.",
+  "keywords": [
+    "decouple",
+    "order",
+    "ingestion",
+    "real-time",
+    "inventory",
+    "allocation",
+    "state",
+    "transitions",
+    "payment",
+    "integration",
+    "and",
+    "third-party",
+    "logistics",
+    "(3PL)",
+    "fulfillment",
+    "into",
+    "a",
+    "fault-tolerant",
+    "event-driven",
+    "architecture",
+    "(EDA)"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "NEXORA_Backend"
+  },
+  "license": "ISC",
+  "author": "shivanshu kashyap",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
