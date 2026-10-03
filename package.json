@@ -32,12 +32,31 @@
   "license": "ISC",
   "author": "shivanshu kashyap",
   "type": "commonjs",
-  "main": "index.js",
+  "main": "src/server.js",
   "scripts": {
-    "test": "npm test index.js",
-    "start": "node index.js"
+    "dev": "nodemon src/server.js",
+    "start": "nodemon src/server.js",
+    "test": "echo \"No tests specified yet\""
   },
   "dependencies": {
-    "nodemon": "^3.1.14"
+    "@supabase/supabase-js": "^2.117.2",
+    "bcryptjs": "^3.0.3",
+    "bullmq": "^6.3.11",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1",
+    "handlebars": "^4.7.9",
+    "helmet": "^8.3.0",
+    "ioredis": "^6.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.0.13",
+    "nodemon": "^3.1.14",
+    "opossum": "^10.0.0",
+    "pg": "^8.23.1",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^14.0.2",
+    "winston": "^3.19.0",
+    "zod": "^4.6.5"
   }
 }

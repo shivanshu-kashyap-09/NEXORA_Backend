@@ -1,11 +1,37 @@
-name: CD
+# name: Deploy to Server
+
+# on:
+#   push:
+#     branches: [main]
+
+# jobs:
+#   deploy:
+#     name: SSH Deploy to Production
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: SSH Deploy to Server
+#         uses: appleboy/ssh-action@v1.0.3
+#         with:
+#           host: ${{ secrets.SERVER_IP }}
+#           username: ${{ secrets.SERVER_USERNAME }}
+#           key: ${{ secrets.SERVER_SSH_KEY }}
+#           script: |
+#             cd /var/www/nexora_backend || cd ~/nexora_backend
+#             git pull origin main
+#             npm ci --omit=dev
+#             pm2 reload ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
+
+name: Deploy to Render
+
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+
 jobs:
   deploy:
+    name: Trigger Render Deployment
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Deploy Placeholder
-      run: echo 'Add deployment script here'
+      - name: Trigger Render Deploy Hook
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
