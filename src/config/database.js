@@ -1,25 +1,37 @@
 const config = require('./environment');
 const logger = require('./logger');
-const { Pool } = require('pg'); // for direct db connection
-const { createClient } = require('@supabase/supabase-js'); // for client-side db operations
+const { Pool } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 
+// Direct PostgreSQL Connection Pool
 const pool = new Pool({
-  connectionString: config.database_url, // for direct db connection
-  ssl: { rejectUnauthorized: false }, // for direct db connection
+  connectionString: config.database_url,
+  max: config.db_pool_max,
+  idleTimeoutMillis: config.db_pool_idle_timeout_ms,
+  connectionTimeoutMillis: 10000,
+  ssl: { rejectUnauthorized: false },
 });
 
+pool.on('error', (err) => {
+  logger.error('Unexpected error on idle PostgreSQL client pool', { error: err.message });
+});
+
+// Supabase Public / Anon Client
 const supabase = createClient(
   config.supabase_url || '',
   config.supabase_anon_key || ''
-); // for client-side db operations
+);
 
+// Supabase Service Role Client (Elevated Privileges)
 const supabaseServiceRole = createClient(
   config.supabase_url || '',
   config.supabase_service_role_key || ''
-); // for server-side db operations
+);
 
-const queryDb = (text, params) => pool.query(text, params); // for direct db connection
+// Direct DB Query Helper
+const queryDb = (text, params) => pool.query(text, params);
 
+// Connection Health Check
 const testDbConnection = async () => {
   try {
     const res = await pool.query('SELECT NOW() AS now');
@@ -32,9 +44,9 @@ const testDbConnection = async () => {
 };
 
 module.exports = {
-  pool, // for graceful shutdown and pool queries
-  testDbConnection, // for db connection test
-  queryDb, // for direct db connection
-  supabase, // for client-side db operations
-  supabaseServiceRole, // for server-side db operations
+  pool,
+  testDbConnection,
+  queryDb,
+  supabase,
+  supabaseServiceRole,
 };

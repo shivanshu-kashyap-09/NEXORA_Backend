@@ -1,15 +1,26 @@
 const express = require('express');
+const helmet = require('helmet');
+const cors = require('cors');
 const environment = require('./config/environment');
 const { swaggerUi, swaggerSpec } = require('./config/swagger');
 const routes = require('./routes/v1');
-const errorHandler = require('./shared/middleware/errorHandler');
-const AppError = require('./shared/errors/AppError');
+const { correlationId, errorHandler } = require('./shared/middleware');
+const { NotFoundError } = require('./shared/errors');
+const { testDbConnection } = require('./config/database');
+const { testRedisConnection } = require('./config/redis');
 
 const app = express();
 
-// Body Parsing Middleware
-app.use(express.json()); // For parsing application/json
-app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
+// Security Headers & Cross-Origin Resource Sharing
+app.use(helmet());
+app.use(cors({ origin: environment.cors_origin, credentials: true }));
+
+// Request Tracing & Correlation ID Injection
+app.use(correlationId);
+
+// Body Parsing Middleware with size limit mitigation
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Swagger API Documentation UI & Raw JSON Spec
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -22,91 +33,186 @@ app.get('/api-docs.json', (req, res) => {
  * @openapi
  * /:
  *   get:
- *     summary: Welcome Root Endpoint
- *     description: Returns basic API status greeting.
+ *     summary: Root Service Discovery & Information
+ *     description: Returns engine identification, active version, current environment, and Swagger documentation links.
  *     tags:
- *       - System
+ *       - System Probes
  *     responses:
  *       200:
- *         description: API greeting message
+ *         description: Service details retrieved successfully
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 message:
+ *                 name:
  *                   type: string
- *                   example: Welcome to Nexora API
+ *                   example: NEXORA OMS Engine
+ *                 version:
+ *                   type: string
+ *                   example: 1.0.0
+ *                 environment:
+ *                   type: string
+ *                   example: development
+ *                 docs:
+ *                   type: string
+ *                   example: /api-docs
+ *                 timestamp:
+ *                   type: string
+ *                   example: "2026-10-03T10:15:30.000Z"
+ *                 correlationId:
+ *                   type: string
+ *                   example: "req_01J8ZX11234AB"
  */
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to Nexora API' });
+  res.json({
+    name: 'NEXORA OMS Engine',
+    version: environment.app_version,
+    environment: environment.node_env,
+    docs: '/api-docs',
+    timestamp: new Date().toISOString(),
+    correlationId: req.correlationId,
+  });
 });
 
 /**
  * @openapi
  * /health:
  *   get:
- *     summary: System Health & Uptime Probe
- *     description: Returns server health status, uptime, environment, and version.
+ *     summary: Liveness Health Probe
+ *     description: Validates that the Node.js event loop is non-blocking and the application process is running.
  *     tags:
- *       - System
+ *       - System Probes
  *     responses:
  *       200:
- *         description: System is healthy and operational
+ *         description: Application process is alive
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
  *                 status:
+ *                   type: string
+ *                   example: UP
+ *                 statusCode:
  *                   type: integer
  *                   example: 200
- *                 message:
- *                   type: string
- *                   example: OK
  *                 uptime:
  *                   type: number
- *                   example: 123.45
+ *                   example: 452.12
  *                 timestamp:
  *                   type: string
- *                   example: "2026-10-03T01:22:10.000Z"
+ *                   example: "2026-10-03T10:15:30.000Z"
  *                 environment:
  *                   type: string
  *                   example: development
  *                 version:
  *                   type: string
  *                   example: 1.0.0
- *       500:
- *         description: Internal Server Error
+ *                 correlationId:
+ *                   type: string
+ *                   example: "req_01J8ZX11234AB"
  */
-app.get('/health', (req, res) => {
-  try {
-    return res.json({
-      status: 200,
-      message: 'OK',
-      uptime: process.uptime(), // seconds
-      timestamp: new Date().toISOString(), // iso string
-      environment: environment.node_env, // environment
-      version: environment.app_version, // app version
-    });
-  } catch (error) {
-    return res.json({
-      status: 500,
-      message: 'Internal server error',
-      timestamp: new Date().toISOString(),
-    });
-  }
+app.get(['/health', '/live'], (req, res) => {
+  res.json({
+    status: 'UP',
+    statusCode: 200,
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    environment: environment.node_env,
+    version: environment.app_version,
+    correlationId: req.correlationId,
+  });
 });
 
-// API Routes
+/**
+ * @openapi
+ * /ready:
+ *   get:
+ *     summary: Deep Readiness Health Probe
+ *     description: Deep probe verifying active connectivity to both PostgreSQL and Redis 7 in-memory subsystems.
+ *     tags:
+ *       - System Probes
+ *     responses:
+ *       200:
+ *         description: All dependent subsystems are healthy and ready to accept incoming traffic
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: READY
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 dependencies:
+ *                   type: object
+ *                   properties:
+ *                     database:
+ *                       type: string
+ *                       example: HEALTHY
+ *                     redis:
+ *                       type: string
+ *                       example: HEALTHY
+ *                 timestamp:
+ *                   type: string
+ *                   example: "2026-10-03T10:15:30.000Z"
+ *                 correlationId:
+ *                   type: string
+ *                   example: "req_01J8ZX11234AB"
+ *       503:
+ *         description: One or more dependent subsystems are degraded or unavailable
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: DEGRADED
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 503
+ *                 dependencies:
+ *                   type: object
+ *                   properties:
+ *                     database:
+ *                       type: string
+ *                       example: DOWN
+ *                     redis:
+ *                       type: string
+ *                       example: DOWN
+ */
+app.get('/ready', async (req, res) => {
+  const dbStatus = await testDbConnection();
+  const redisStatus = await testRedisConnection();
+
+  const isReady = dbStatus && redisStatus;
+  const statusCode = isReady ? 200 : 503;
+
+  return res.status(statusCode).json({
+    status: isReady ? 'READY' : 'DEGRADED',
+    statusCode,
+    dependencies: {
+      database: dbStatus ? 'HEALTHY' : 'DOWN',
+      redis: redisStatus ? 'HEALTHY' : 'DOWN',
+    },
+    timestamp: new Date().toISOString(),
+    correlationId: req.correlationId,
+  });
+});
+
+// Versioned API Gateway Routes
 app.use('/api/v1', routes);
 
 // Handle 404 Not Found
 app.use((req, res, next) => {
-  next(new AppError(`Route ${req.originalUrl} not found`, 404));
+  next(new NotFoundError(`Route '${req.method} ${req.originalUrl}' not found on NEXORA Engine`));
 });
 
-// Error handling middleware must be last
+// Centralized Error Handling Middleware
 app.use(errorHandler);
 
 module.exports = app;

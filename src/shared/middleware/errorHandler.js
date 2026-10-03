@@ -1,74 +1,59 @@
 const environment = require('../../config/environment');
 const logger = require('../../config/logger');
+const { ErrorCodes } = require('../errors');
 
 /**
- * Sends detailed error information during development for rapid debugging.
- * @param {Error} err - The error object.
- * @param {object} res - Express response object.
- */
-const sendErrorDev = (err, res) => {
-  logger.error(`[Dev Error] ${err.statusCode} - ${err.message}`, {
-    stack: err.stack,
-  });
-
-  return res.status(err.statusCode).json({
-    success: false,
-    status: err.status,
-    statusCode: err.statusCode,
-    message: err.message,
-    error: err,
-    stack: err.stack,
-    timestamp: new Date().toISOString(),
-  });
-};
-
-/**
- * Sends clean, safe error responses in production without leaking internal server details.
- * @param {Error} err - The error object.
- * @param {object} res - Express response object.
- */
-const sendErrorProd = (err, res) => {
-  // 1. Operational, trusted error: send user-friendly message to client
-  if (err.isOperational) {
-    logger.warn(`[Operational Warning] ${err.statusCode} - ${err.message}`);
-
-    return res.status(err.statusCode).json({
-      success: false,
-      status: err.status,
-      statusCode: err.statusCode,
-      message: err.message,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  // 2. Programming or unknown error: don't leak error details to client
-  logger.error('UNEXPECTED PRODUCTION ERROR:', {
-    message: err.message,
-    stack: err.stack,
-  });
-
-  return res.status(500).json({
-    success: false,
-    status: 'error',
-    statusCode: 500,
-    message: 'Something went wrong on our end. Please try again later.',
-    timestamp: new Date().toISOString(),
-  });
-};
-
-/**
- * Global Express Error Handling Middleware.
- * Automatically catches and formats errors from all routes and controllers.
+ * Global Express Error Handling Middleware
+ * Ensures all API errors match the standardized NEXORA error contract.
  */
 const errorHandler = (err, req, res, next) => {
-  err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
+  const statusCode = err.statusCode || 500;
+  const errorCode = err.errorCode || ErrorCodes.INTERNAL_SERVER_ERROR;
+  const correlationId = req.correlationId || res.getHeader('X-Correlation-ID');
 
-  if (environment.node_env === 'development') {
-    sendErrorDev(err, res);
-  } else {
-    sendErrorProd(err, res);
+  const errorResponse = {
+    success: false,
+    statusCode,
+    error: {
+      code: errorCode,
+      message: err.message || 'Internal server error occurred',
+    },
+    timestamp: new Date().toISOString(),
+    correlationId,
+  };
+
+  if (err.details) {
+    errorResponse.error.details = err.details;
   }
+
+  // Development mode: include error stack trace
+  if (environment.node_env === 'development') {
+    errorResponse.error.stack = err.stack;
+    logger.error(`[Dev Error] ${statusCode} [${errorCode}] - ${err.message}`, {
+      correlationId,
+      path: req.originalUrl,
+      stack: err.stack,
+    });
+  } else {
+    // Production mode
+    if (err.isOperational) {
+      logger.warn(`[Operational Error] ${statusCode} [${errorCode}] - ${err.message}`, {
+        correlationId,
+        path: req.originalUrl,
+      });
+    } else {
+      logger.error('UNEXPECTED PRODUCTION ERROR:', {
+        correlationId,
+        path: req.originalUrl,
+        message: err.message,
+        stack: err.stack,
+      });
+      // Sanitize non-operational messages in production
+      errorResponse.error.message = 'An unexpected internal error occurred. Please contact support with the correlation ID.';
+    }
+  }
+
+  return res.status(statusCode).json(errorResponse);
 };
 
 module.exports = errorHandler;
