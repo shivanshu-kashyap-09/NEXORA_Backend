@@ -7,6 +7,7 @@ const warehouseModule = require('../../modules/warehouse');
 const inventoryModule = require('../../modules/inventory');
 const customerModule = require('../../modules/customer');
 const channelModule = require('../../modules/channel');
+const orderModule = require('../../modules/order');
 
 // Mount Authentication & Identity Routes
 router.use('/auth', identityModule.routes);
@@ -28,5 +29,8 @@ router.use('/customers', customerModule.routes);
 
 // Mount Sales Channels & Connectors Routes (/channels)
 router.use('/channels', channelModule.routes);
+
+// Mount Order Orchestration Engine Routes (/orders)
+router.use('/orders', orderModule.routes);
 
 module.exports = router;
