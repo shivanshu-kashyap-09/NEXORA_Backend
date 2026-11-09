@@ -39,6 +39,7 @@ const VALID_STATUS_TRANSITIONS = {
   ],
   [OrderStatus.READY]: [
     OrderStatus.FULFILLED,
+    OrderStatus.COMPLETED,
     OrderStatus.CANCELLED,
     OrderStatus.ON_HOLD,
   ],

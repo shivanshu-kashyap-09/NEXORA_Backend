@@ -12,6 +12,7 @@ const paymentModule = require('../../modules/payment');
 const fulfillmentModule = require('../../modules/fulfillment');
 const shipmentModule = require('../../modules/shipment');
 const refundModule = require('../../modules/refund');
+const omnichannelModule = require('../../modules/omnichannel');
 
 // Mount Authentication & Identity Routes
 router.use('/auth', identityModule.routes);
@@ -48,5 +49,8 @@ router.use('/shipments', shipmentModule.routes);
 
 // Mount Reverse Logistics, Returns & RMA Routes (/returns)
 router.use('/returns', refundModule.routes);
+
+// Mount Omnichannel Retail Fulfillment Routes (/omnichannel)
+router.use('/omnichannel', omnichannelModule.routes);
 
 module.exports = router;
