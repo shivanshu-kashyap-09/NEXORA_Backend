@@ -150,3 +150,4 @@ router.post('/logout', identityController.logout);
 router.get('/me', authGuard, identityController.getProfile);
 
 module.exports = router;
+
