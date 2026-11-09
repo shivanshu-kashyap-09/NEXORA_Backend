@@ -12,3 +12,4 @@ const DiscountType = {
 module.exports = {
   DiscountType,
 };
+
