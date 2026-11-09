@@ -1,48 +1,60 @@
-# NEXORA Core OMS — MVP Master Feature Specification
+# NEXORA Core OMS — Universal Commerce & Master Feature Specification
 
-> **Document Version:** 1.0.0  
-> **Platform Classification:** Enterprise Multi-Tenant Order Orchestration & Fulfillment Engine  
-> **Document Scope:** Complete 44-Domain Master Feature & Technical Architecture Specification  
+> **Document Version:** 2.0.0  
+> **Platform Classification:** Universal Headless Commerce Backbone, Multi-Tenant Order Orchestration & Fulfillment Engine  
+> **Document Scope:** Complete End-to-End 53-Domain Master Feature, Universal Storefront Plugin Ecosystem & Technical Architecture Specification  
 
 ---
 
 ## Executive Architecture Overview
 
-**NEXORA** is an enterprise-grade, high-throughput multi-tenant order orchestration and fulfillment platform engineered for modern e-commerce enterprises, retail brand networks, and marketplace facilitators. This specification outlines all **44 functional and operational feature domains** included in the MVP baseline, complete with domain architecture visual workflows, technical benchmarks, and deterministic state models.
+**NEXORA** is an enterprise-grade, high-throughput multi-tenant order orchestration and fulfillment platform engineered for modern e-commerce enterprises, retail brand networks, and marketplace facilitators. It acts as a universal headless commerce backbone connecting seamlessly with any e-commerce storefront or marketplace (**Shopify, WooCommerce, Magento, BigCommerce, Amazon, Flipkart, Headless React/Next.js/Mobile**) via plug-and-play plugins and connectors. This specification outlines all **53 functional and operational feature domains** required to power global multi-channel retail operations, complete with domain architecture visual workflows, technical benchmarks, and deterministic state models.
 
 ```
-                               ┌─────────────────────────────────────────────────┐
-                               │           Client Ingress / API Gateway          │
-                               │  (REST /v1, OpenAPI, TLS 1.3, Rate Limiters)    │
-                               └────────────────────────┬────────────────────────┘
-                                                        │
-                              ┌─────────────────────────▼─────────────────────────┐
-                              │            NEXORA Core Backend Engine             │
-                              │  - Multi-Tenant RLS Context Injector              │
-                              │  - RS256 JWT Authentication & Granular RBAC       │
-                              │  - Idempotency Interceptor & Distributed Locks    │
-                              │  - Deterministic Order State Machine              │
-                              └──────────────┬───────────────────┬────────────────┘
-                                             │                   │
-                           ┌─────────────────▼─────┐       ┌─────▼────────────────┐
-                           │   Redis 7 In-Memory   │       │ PostgreSQL 16 (RLS)  │
-                           │  - Cache-Aside Layer  │       │ - Multi-Tenant Data  │
-                           │  - Distributed Mutex  │       │ - Transactional      │
-                           │  - 15-Min Soft Holds  │       │   Outbox Table       │
-                           │  - Rate Limit Keys    │       │ - Immutable Audits   │
-                           └───────────────────────┘       └──────────┬───────────┘
-                                                                      │
-                                                    ┌─────────────────▼───────────┐
-                                                    │  Async Transactional Outbox │
-                                                    │  CDC Relay / Poller Worker  │
-                                                    └─────────────────┬───────────┘
-                                                                      │
-                                          ┌───────────────────────────┴───────────────────────────┐
-                                          ▼                                                       ▼
-                            ┌───────────────────────────┐                           ┌───────────────────────────┐
-                            │  Event Bus (CloudEvents)  │                           │   PSP & Carrier Webhooks  │
-                            │  (Email / Webhooks / DLQ) │                           │  (Idempotent Ingestion)   │
-                            └───────────────────────────┘                           └───────────────────────────┘
+ ┌─────────────────┐   ┌─────────────────┐   ┌──────────────────┐   ┌─────────────────┐
+ │  Shopify Store  │   │   WooCommerce   │   │  Amazon / Mkp    │   │ Custom Headless │
+ │  (NEXORA App)   │   │(NEXORA WP Plugin│   │(NEXORA Connector)│   │  (NEXORA SDK)   │
+ └────────┬────────┘   └────────┬────────┘   └────────┬─────────┘   └────────┬────────┘
+          │                     │                     │                      │
+          └─────────────────────┼─────────────────────┴──────────────────────┘
+                                │  Webhooks & Ingress APIs (Encrypted, Signed & Idempotent)
+                                ▼
+ ┌───────────────────────────────────────────────────────────────────────────────────┐
+ │               NEXORA Client Ingress & Universal Channel Gateway Layer             │
+ │  - Storefront Plugins & Channel Normalization Adapters (Shopify/Woo/Amazon -> DTO)│
+ │  - Multi-Tenant RLS Context Injector & Per-Tenant Scope Router                    │
+ │  - RS256 JWT Authentication, Granular RBAC & API Key Guard                        │
+ │  - Idempotency Interceptor, Distributed Locks & Rate Limiters                     │
+ └─────────────────────────┬───────────────────────────────────┬─────────────────────┘
+                           │                                   │
+ ┌─────────────────────────▼───────────────────────────────────▼─────────────────────┐
+ │                            NEXORA Core Backend Engine                             │
+ │  - Deterministic Order State Machine & Snapshot Immutability                      │
+ │  - Multi-Warehouse DOM & Intelligent Routing Engine                               │
+ │  - Global Inventory Pool & Real-Time Cross-Channel Allocation Engine              │
+ │  - Financial Double-Entry Reconciliation & Automated Tax Engines                  │
+ └─────────────┬───────────────────────────────────────────────────────┬─────────────┘
+               │                                                       │
+ ┌─────────────▼─────────┐                               ┌─────────────▼─────────────┐
+ │   Redis 7 In-Memory   │                               │    PostgreSQL 16 (RLS)    │
+ │  - Cache-Aside Layer  │                               │  - Hard Multi-Tenant Data │
+ │  - Distributed Mutex  │                               │  - Transactional Outbox   │
+ │  - 15-Min Soft Holds  │                               │  - Double-Entry Ledgers   │
+ │  - Rate Limit Keys    │                               │  - Immutable Audit Trails │
+ └───────────────────────┘                               └─────────────┬─────────────┘
+                                                                       │
+                                                         ┌─────────────▼─────────────┐
+                                                         │ Async Transactional Outbox│
+                                                         │ CDC Relay / BullMQ Worker │
+                                                         └─────────────┬─────────────┘
+                                                                       │
+                         ┌─────────────────────────────────────────────┴─────────────────────────────────────────────┐
+                         ▼                                                                                           ▼
+           ┌───────────────────────────┐                                                               ┌───────────────────────────┐
+           │  Event Bus (CloudEvents)  │                                                               │ Bi-Directional Channel    │
+           │  (Email / Webhooks / DLQ) │                                                               │ Sync & Carrier Adapters   │
+           │  (Warehouse WMS, ERPs)    │                                                               │ (Stock & Tracking Push)   │
+           └───────────────────────────┘                                                               └───────────────────────────┘
 ```
 
 ---
@@ -61,7 +73,7 @@
 
 ---
 
-## Complete 44-Domain Master Feature Specification
+## Complete 53-Domain Master Feature Specification
 
 ---
 
@@ -1192,3 +1204,242 @@ Publish CloudEvent JSON to Partitioned Broker Topic
 * **Disaster Recovery Documentation:** Runbooks for cross-region failover and restore.
 * **Operational Runbook:** On-call incident response playbooks and triage guides.
 * **Incident Response Documentation:** Severity classification and post-mortem templates.
+
+---
+
+### 45. Universal Channel & Storefront Integrations (Marketplace & E-Commerce Connectors)
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ External Channels (Shopify / WooCommerce / Magento / Amazon / SDK)     │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │ Inbound Webhooks & REST/GraphQL Ingress
+                                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ Channel Normalization Adapter Layer                                    │
+│ (Transforms platform-specific payloads into Canonical NEXORA DTOs)     │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │ Standardized Order / Inventory Mutation
+                                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ NEXORA Core Engine (Multi-Tenant RLS & 15-Min Soft Reservation Pool)   │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │ Outbound Sync (Stock Updates & Tracking Push)
+                                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ Channel Outbox Dispatcher (Shopify Fulfilled + Carrier Tracking Link)  │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+* **Shopify App & Plugin Integration:** Certified Shopify public/custom app with OAuth 2.0 handshake, webhook HMAC-SHA256 signature verification, and Shopify GraphQL Admin API bi-directional synchronization.
+* **WooCommerce Plugin Integration:** Native WordPress/WooCommerce plugin utilizing WooCommerce REST API v3, custom Action Scheduler queues, and HMAC webhook authentication.
+* **Magento 2 (Adobe Commerce) Connector:** Enterprise connector utilizing Magento Asynchronous & Bulk REST APIs for high-volume catalog, stock, and order ingestions.
+* **BigCommerce & SFCC Connectors:** Turnkey webhooks and API bridges for BigCommerce and Salesforce Commerce Cloud.
+* **Marketplace Connectors (Amazon SP-API & Flipkart):** Automated integration with Amazon Selling Partner API (SP-API) and Flipkart Seller API for order ingestion, order acknowledgment, and settlement tracking.
+* **Headless Storefront SDK (`@nexora/commerce-sdk`):** Lightweight TypeScript/Node.js/React SDK allowing custom storefronts (Next.js Commerce, Nuxt, React Native, Flutter) to communicate directly with NEXORA core APIs.
+* **Canonical Data Normalization (Adapter Layer):** Domain adapter pattern converting diverse platform schemas into standardized NEXORA entities (`OrderDTO`, `CustomerDTO`, `InventoryDTO`).
+* **Bi-Directional Order Synchronization:** Real-time ingestion of new orders from storefronts, and automated status push (`CONFIRMED`, `SHIPPED`, `CANCELLED`) back to connected storefronts.
+* **Bi-Directional Real-Time Inventory Sync:** Atomic inventory updates in NEXORA trigger automated stock updates across all active connected sales channels within < 2 seconds, preventing cross-channel overselling.
+* **Fulfillment & Tracking Push:** Packaging and carrier dispatch in NEXORA automatically pushes tracking numbers and marks orders as "Fulfilled" in the customer's native storefront.
+* **Channel-Specific Inventory Buffers & Safety Stock:** Configurable rules per channel (e.g., reserve 80% stock for Shopify, 20% for Amazon, or hold a 5-unit safety buffer).
+* **Channel Rate-Limit & Leaky Bucket Handling:** Dynamic queuing and exponential backoff honoring storefront API limits (e.g., Shopify 40 req/sec bucket).
+* **Channel Webhook Auto-Recovery:** Automated webhook replay and reconciliation jobs to recover missed events during external platform downtime.
+
+---
+
+### 46. Returns, Exchanges & Reverse Logistics (RMA)
+
+```
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ Customer Portal  │ ──► │ RMA Authorization│ ──► │ Reverse Carrier  │
+│ Return Request   │     │ & Policy Check   │     │ Pickup Scheduled │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+                                                           │
+                                                           ▼
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ Resolution:      │ ◄── │ Warehouse Intake │ ◄── │ Carrier In-Transit│
+│ Restock/Refund/  │     │ & QA Grading     │     │ Package Scans    │
+│ Exchange Order   │     │ (Sellable/Scrap) │     │                  │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+```
+
+* **Customer Self-Service Return Portal:** Branded customer-facing interface to submit return and exchange requests against eligible orders.
+* **Return Policy Validation Engine:** Configurable return eligibility rules (e.g., 7/15/30-day return windows, non-returnable categories, hygiene seal verification).
+* **RMA (Return Merchandise Authorization) Generation:** System-generated unique RMA identifier tracking goods from customer dispatch to warehouse intake.
+* **Reverse Shipping Label Generation:** Instant automated generation of prepaid return shipping labels via integrated carrier APIs (Delhivery, BlueDart, FedEx).
+* **Reverse Logistics Tracking:** Real-time carrier milestone synchronization (`PICKUP_SCHEDULED`, `OUT_FOR_PICKUP`, `PICKED_UP`, `IN_TRANSIT_RTO`, `RECEIVED_AT_HUB`).
+* **Warehouse Return Intake & QA Inspection:** Warehouse tablet/scanner workflow for inspecting returned merchandise and assigning quality grades (`SELLABLE`, `REFURBISHABLE`, `DAMAGED_SCRAP`).
+* **Automated Stock Disposition & Restocking:** Automatic ledger credit back to active sellable inventory for passed items, or quarantined damaged inventory ledger.
+* **Product Exchange & Replacement Order Automation:** Creation of linked zero-value replacement orders with instant inventory soft holds and warehouse dispatch triggers.
+* **Return Fraud Detection:** AI and rules-based flagging for suspicious return behavior (serial returners, empty box claims, tag tampering).
+
+---
+
+### 47. Omnichannel Retail Fulfillment (BOPIS, BORIS & Ship-from-Store)
+
+```
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ Online Checkout  │ ──► │ Store Selection  │ ──► │ Store Associate  │
+│ (BOPIS Selected) │     │ & Local Hold     │     │ Mobile Picking   │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+                                                           │
+                                                           ▼
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ Post-Sale Return │     │ Customer Handover│ ◄── │ Staged & Ready   │
+│ In Store (BORIS) │     │ via OTP / Barcode│     │ Customer Notified│
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+```
+
+* **BOPIS (Buy Online, Pick Up In Store):** Ingress routing allowing customers to select physical store locations at checkout for local collection.
+* **Real-Time Store Inventory Visibility:** Localized inventory lookup enabling customer order allocation directly against retail store shelves.
+* **Store Associate Mobile Fulfillment App:** Lightweight mobile UI for store associates to receive picking alerts, barcode-scan items off retail shelves, and stage packages.
+* **Customer Pickup Verification:** Secure handover validation utilizing one-time PIN (OTP) or customer QR/Barcode scanning before order status moves to `COMPLETED`.
+* **BORIS (Buy Online, Return In Store):** In-store return desk capability allowing customers to return online purchases at physical retail counters with instant validation and refund.
+* **Ship-from-Store (SFS) Routing:** Intelligent DOM routing enabling retail stores to act as localized fulfillment micro-hubs, minimizing carrier transit time and delivery expenses.
+* **Store Capacity & Shift Quotas:** Configurable daily fulfillment thresholds per store preventing retail staff overload during peak shopping hours.
+
+---
+
+### 48. Advanced Promotions, Discounts & Coupon Engine
+
+```
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ Cart Items &     │ ──► │ Promotion Rule   │ ──► │ Discount Split & │
+│ Tenant Context   │     │ Evaluation Matrix│     │ Line-Item Apport.│
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+                                                           │
+                                                           ▼
+                                                  ┌──────────────────┐
+                                                  │ Order Snapshot & │
+                                                  │ Financial Ledger │
+                                                  └──────────────────┘
+```
+
+* **Voucher & Coupon Management:** Multi-tenant coupon code generation with configurable redemption limits (single-use, per-customer, total platform cap).
+* **Tiered & Cart-Level Discounts:** Percentage discounts, flat monetary deductions, and spend-threshold tiers (e.g., "Spend $100, get $20 off").
+* **Complex Promotional Rule Sets:** BOGO (Buy One Get One), Buy X Get Y at Z% discount, free shipping promotions, and gift-with-purchase (GWP) automation.
+* **Promotional Stacking & Exclusivity Rules:** Granular configuration determining whether multiple promotions, coupons, or automatic discounts can be combined.
+* **Channel & Category Scoping:** Restricting promotions to specific sales channels (e.g., "Shopify App Exclusive"), product categories, or customer tiers (VIP/Gold).
+* **Dynamic Campaign Scheduling:** Timezone-aware promotion start and end triggers with automated cache invalidation.
+* **Line-Item Discount Apportionment:** Pro-rata allocation of cart-level discounts across line items for mathematically precise tax and refund handling.
+
+---
+
+### 49. Product Bundling, Kitting & Bill of Materials (BOM)
+
+```
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ Bundle SKU       │ ──► │ BOM Resolution   │ ──► │ Atomic Multi-SKU │
+│ Ordered          │     │ (Components A+B) │     │ Inventory Hold   │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+                                                           │
+                                                           ▼
+                                                  ┌──────────────────┐
+                                                  │ Warehouse Kit    │
+                                                  │ Assembly Picking │
+                                                  └──────────────────┘
+```
+
+* **Virtual Bundles & Composite SKUs:** Defining aggregate parent SKUs composed of multiple independent physical inventory components (Bill of Materials - BOM).
+* **Dynamic Stock Resolution:** Live calculation of bundle availability based strictly on the limiting component:
+  $$	ext{Stock}_{	ext{Bundle}} = \min \left( \left\lfloor rac{	ext{Stock}_i}{	ext{Qty}_i} ightfloor ight) \quad orall \, i \in 	ext{Components}$$
+* **Atomic Multi-SKU Inventory Lock:** Simultaneous distributed locking and reservation across all component SKUs upon order ingestion.
+* **Physical Kitting & Assembly Workflows:** Warehouse work-order generation for pre-packing bundles prior to dispatch.
+* **Bundle De-Kitting & Component Returns:** Dynamic breakdown of bundle components during returns, allowing partial restocking of undamaged constituent items.
+* **Component-Level Tax & Revenue Recognition:** Itemized accounting allocation across bundle items compliant with statutory financial reporting standards.
+
+---
+
+### 50. Tax Compliance, Invoicing & Legal Document Generation
+
+```
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ Order Confirmed  │ ──► │ Tax Calculation  │ ──► │ PDF Generation & │
+│ & Paid           │     │ Engine (Avalara) │     │ Digital Signature│
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+                                                           │
+                                                           ▼
+                                                  ┌──────────────────┐
+                                                  │ S3 Storage &     │
+                                                  │ Customer/WMS URL │
+                                                  └──────────────────┘
+```
+
+* **Automated Tax Engine Integrations:** Plug-and-play adapters for leading enterprise tax engines (Avalara AvaTax, TaxJar, Stripe Tax, Vertex).
+* **Regional & Statutory Tax Support:** Dynamic tax computation across jurisdictions: US State/County Sales Tax, Canadian GST/PST, European VAT, and Indian GST (CGST, SGST, IGST with HSN/SAC codes).
+* **Legal Tax Invoice Generation:** Deterministic PDF rendering of branded tax invoices complete with sequential numbering, QR codes, and digital verification signatures.
+* **Credit Notes & Debit Notes:** Automated generation of legally compliant credit notes upon partial/full refund or return completion.
+* **Warehouse Documentation:** High-speed batch rendering of thermal shipping labels (ZPL/PDF), packing manifests, pick lists, and box labels.
+* **Government Portal Compliance:** Automated e-Way bill and e-Invoicing API integration for applicable cross-border and regional logistics mandates.
+
+---
+
+### 51. Pre-Orders, Backorders & Split Shipment Allocation
+
+```
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ Stock = 0        │ ──► │ Policy Check     │ ──► │ Pre-Order Queue  │
+│ Order Placement  │     │ (Allow Backorder)│     │ Created & Locked │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+                                                           │
+                                                           ▼
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ Warehouse        │ ◄── │ Wave Allocation  │ ◄── │ Inbound Supplier │
+│ Dispatch Order   │     │ (FIFO Priority)  │     │ Shipment Docked  │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+```
+
+* **Pre-Order Launch Engine:** Product launch management allowing customer pre-purchases with promised fulfillment release dates.
+* **Backorder Management System:** Configurable per-SKU backorder policies allowing continuous order intake beyond physical inventory limits.
+* **Automated Fulfillment Wave Triggers:** As soon as inbound replenishment shipments (ASNs) dock and are scanned into inventory, the backorder queue is atomically allocated based on First-In, First-Out (FIFO) priority.
+* **Intelligent Split Shipments:** Dynamic splitting of mixed orders into separate fulfillment consignments (shipping in-stock items immediately and holding backordered items for second-wave dispatch).
+* **Consolidated Parent-Child Tracking:** Single unified customer order view linking multiple independent carrier tracking numbers and packages.
+
+---
+
+### 52. Vendor & Drop-Shipping Management
+
+```
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ Multi-Vendor     │ ──► │ Vendor Order     │ ──► │ Vendor Portal /  │
+│ Order Ingested   │     │ Split Routing    │     │ EDI Transmission │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+                                                           │
+                                                           ▼
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ Customer Delivery│ ◄── │ Carrier Tracking │ ◄── │ Vendor Pack &    │
+│ & Vendor Payout  │     │ Ingested via API │     │ Dispatch Manifest│
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+```
+
+* **Vendor & Supplier Onboarding:** Comprehensive vendor profiles, commission rules, SLA targets, and warehouse address mapping.
+* **Automated Drop-Ship Routing:** Automatic routing of line items directly to third-party suppliers based on vendor SKU assignment and contracts.
+* **Supplier Self-Service Portal:** Secure portal for drop-ship suppliers to acknowledge orders, download tenant-branded packing slips, and upload dispatch tracking IDs.
+* **EDI & B2B API Bridges:** Support for enterprise electronic data interchange (EDI 850, 856, 810) and REST webhooks for automated supplier synchronization.
+* **Purchase Order (PO) Lifecycle:** End-to-end PO creation, approval workflow, supplier transmission, and warehouse dock receiving against PO line items.
+* **Vendor Settlement & Commission Accounting:** Automated calculation of vendor cost-of-goods, commission deductions, and payment remittance statements.
+
+---
+
+### 53. Cash on Delivery (COD) & Predictive Risk Engine
+
+```
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ COD Order Placed │ ──► │ NDR/RTO AI Risk  │ ──► │ Automated Verify │
+│ Ingress Layer    │     │ Scoring Model    │     │ (WhatsApp/OTP)   │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+                                                           │
+                                                           ▼
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ Remittance Ledger│ ◄── │ Cash Collected   │ ◄── │ Carrier Out For  │
+│ Reconciliation   │     │ by Courier Agent │     │ Delivery Scan    │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+```
+
+* **Automated COD Verification:** Multi-channel automated buyer verification workflows (Interactive WhatsApp confirmation, SMS one-time passcode, automated IVR call) prior to warehouse dispatch.
+* **Predictive Non-Delivery (NDR) & RTO Risk Scoring:** Machine learning / heuristic scoring analyzing customer address completeness, past return history, pin-code risk, and order value to flag high-risk orders.
+* **Fraud & Risk Action Matrix:** Automated actions based on risk threshold (auto-hold for manual review, require pre-payment deposit, or request address correction).
+* **Courier Cash-in-Transit (CIT) Tracking:** Dedicated ledger tracking expected vs actual physical cash collected by 3PL courier partners.
+* **COD Remittance Reconciliation:** Daily/weekly automated reconciliation matching 3PL bank deposits and payout statements against collected cash amounts, flagging courier settlement discrepancies.
+* **Tenant COD Policies & Limits:** Dynamic rule configuration capping maximum allowed COD order value, restricting high-fraud postal codes, or charging non-refundable COD handling fees.
+

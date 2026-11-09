@@ -10,14 +10,17 @@
 
 ## 📌 Overview
 
-**NEXORA** is a high-throughput, enterprise-grade multi-tenant Order Management System (OMS) engineered for modern retail networks, marketplace facilitators, and e-commerce platforms.
+**NEXORA** is a high-throughput, enterprise-grade multi-tenant Order Management System (OMS) and universal headless commerce backbone engineered for modern retail networks, marketplace facilitators, and global e-commerce platforms.
 
 It decouples and orchestrates:
-- **Order Ingestion & Snapshots**
-- **Atomic Real-Time Inventory Allocation & 15-Minute Soft Holds**
+- **Universal Storefront Connectors & Plugins** (Shopify, WooCommerce, Magento, Amazon, Headless SDK)
+- **Order Ingestion & Snapshots** with Canonical Schema Normalization
+- **Atomic Real-Time Cross-Channel Inventory Allocation & 15-Minute Soft Holds**
 - **Deterministic Forward-Only State Machine**
 - **Payment Ingestion, Idempotency & Automated Webhooks**
+- **Omnichannel Retail Fulfillment** (BOPIS, BORIS, Ship-from-Store)
 - **Multi-Warehouse Routing & 3PL Carrier Fulfillment**
+- **Returns, Exchanges & Reverse Logistics (RMA)**
 - **Transactional Outbox Event Bus with Guaranteed Delivery**
 
 ---
@@ -78,8 +81,8 @@ It decouples and orchestrates:
 
 ```
 nexora_backend/
-├── docs/                      # Architectural specs & MVP requirements
-│   └── mvp.md                 # Complete 44-Domain MVP Specification
+├── docs/                      # Architectural specs & system requirements
+│   └── mvp.md                 # Complete 53-Domain Master Specification (With Storefront Plugins & Connectors)
 ├── src/
 │   ├── config/                # Environment variables, Supabase & Redis configs
 │   ├── modules/               # Domain-Driven Design (DDD) Feature Modules
