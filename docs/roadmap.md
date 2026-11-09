@@ -185,3 +185,4 @@
 2. **OpenAPI / Swagger Documentation:** Every newly added endpoint must have full `@openapi` JSDoc annotations with parameter, request body, and response schemas.
 3. **Data Integrity & RLS:** All multi-tenant queries must enforce `tenant_id` isolation using `withTenantTransaction`.
 4. **Distributed Concurrency:** High-contention operations (holds, allocations, redemptions, handovers) must acquire Redis mutex locks.
+

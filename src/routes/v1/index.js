@@ -14,6 +14,7 @@ const shipmentModule = require('../../modules/shipment');
 const refundModule = require('../../modules/refund');
 const omnichannelModule = require('../../modules/omnichannel');
 const promotionModule = require('../../modules/promotion');
+const eventModule = require('../../modules/event');
 
 // Mount Authentication & Identity Routes
 router.use('/auth', identityModule.routes);
@@ -56,5 +57,8 @@ router.use('/omnichannel', omnichannelModule.routes);
 
 // Mount Advanced Promotions, Discounts & Coupons Routes (/promotions)
 router.use('/promotions', promotionModule.routes);
+
+// Mount Transactional Outbox & Event Bus Routes (/events)
+router.use('/events', eventModule.routes);
 
 module.exports = router;
