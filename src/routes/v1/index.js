@@ -8,6 +8,7 @@ const inventoryModule = require('../../modules/inventory');
 const customerModule = require('../../modules/customer');
 const channelModule = require('../../modules/channel');
 const orderModule = require('../../modules/order');
+const paymentModule = require('../../modules/payment');
 
 // Mount Authentication & Identity Routes
 router.use('/auth', identityModule.routes);
@@ -32,5 +33,8 @@ router.use('/channels', channelModule.routes);
 
 // Mount Order Orchestration Engine Routes (/orders)
 router.use('/orders', orderModule.routes);
+
+// Mount Payment Processing, Invoicing & Financial Reconciliation Routes (/payments)
+router.use('/payments', paymentModule.routes);
 
 module.exports = router;
