@@ -1,4 +1,6 @@
 const path = require('path');
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
