@@ -1342,7 +1342,10 @@ Publish CloudEvent JSON to Partitioned Broker Topic
 
 * **Virtual Bundles & Composite SKUs:** Defining aggregate parent SKUs composed of multiple independent physical inventory components (Bill of Materials - BOM).
 * **Dynamic Stock Resolution:** Live calculation of bundle availability based strictly on the limiting component:
-  $$	ext{Stock}_{	ext{Bundle}} = \min \left( \left\lfloor rac{	ext{Stock}_i}{	ext{Qty}_i} ightfloor ight) \quad orall \, i \in 	ext{Components}$$
+  $$	ext{Stock}_{	ext{Bundle}} = \min \left( \left\lfloor rac{	ext{Stock}_i}{	ext{Qty}_i} 
+ight
+floor 
+ight) \quad orall \, i \in 	ext{Components}$$
 * **Atomic Multi-SKU Inventory Lock:** Simultaneous distributed locking and reservation across all component SKUs upon order ingestion.
 * **Physical Kitting & Assembly Workflows:** Warehouse work-order generation for pre-packing bundles prior to dispatch.
 * **Bundle De-Kitting & Component Returns:** Dynamic breakdown of bundle components during returns, allowing partial restocking of undamaged constituent items.
@@ -1442,4 +1445,656 @@ Publish CloudEvent JSON to Partitioned Broker Topic
 * **Courier Cash-in-Transit (CIT) Tracking:** Dedicated ledger tracking expected vs actual physical cash collected by 3PL courier partners.
 * **COD Remittance Reconciliation:** Daily/weekly automated reconciliation matching 3PL bank deposits and payout statements against collected cash amounts, flagging courier settlement discrepancies.
 * **Tenant COD Policies & Limits:** Dynamic rule configuration capping maximum allowed COD order value, restricting high-fraud postal codes, or charging non-refundable COD handling fees.
+
+
+---
+
+## 🗄️ Complete 45-Table Master Data Dictionary & Column Specification
+
+This section provides the exhaustive, production-verified database schema definition across all 45 tables and 420 columns with data types, nullability, and default constraints.
+
+### 1. `api_keys`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `name` | `VARCHAR` | **NOT NULL** | - | name attribute |
+| `key_prefix` | `VARCHAR` | **NOT NULL** | - | key_prefix attribute |
+| `key_hash` | `VARCHAR` | **NOT NULL** | - | key_hash attribute |
+| `scopes` | `ARRAY` | Nullable | `'{read}'[]` | scopes attribute |
+| `is_active` | `BOOLEAN` | **NOT NULL** | `true` | is_active attribute |
+| `expires_at` | `TIMESTAMP WITH TIME ZONE` | Nullable | - | expires_at attribute |
+| `last_used_at` | `TIMESTAMP WITH TIME ZONE` | Nullable | - | last_used_at attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 2. `audit_logs`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `actor_id` | `UUID` | Nullable | - | Foreign Key reference (actor) |
+| `actor_type` | `VARCHAR` | **NOT NULL** | - | actor_type attribute |
+| `action` | `VARCHAR` | **NOT NULL** | - | action attribute |
+| `resource_type` | `VARCHAR` | **NOT NULL** | - | resource_type attribute |
+| `resource_id` | `VARCHAR` | **NOT NULL** | - | Foreign Key reference (resource) |
+| `ip_address` | `VARCHAR` | Nullable | - | ip_address attribute |
+| `user_agent` | `TEXT` | Nullable | - | user_agent attribute |
+| `diff_payload` | `JSONB` | Nullable | `'{}'` | diff_payload attribute |
+| `correlation_id` | `VARCHAR` | Nullable | - | Foreign Key reference (correlation) |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 3. `backorder_queues`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `product_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (product) |
+| `order_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (order) |
+| `quantity` | `INTEGER` | **NOT NULL** | - | quantity attribute |
+| `priority` | `INTEGER` | **NOT NULL** | `1` | priority attribute |
+| `is_allocated` | `BOOLEAN` | **NOT NULL** | `false` | is_allocated attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 4. `bopis_pickups`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `order_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (order) |
+| `store_warehouse_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (store_warehouse) |
+| `pickup_pin_hash` | `VARCHAR` | **NOT NULL** | - | pickup_pin_hash attribute |
+| `is_staged` | `BOOLEAN` | **NOT NULL** | `false` | is_staged attribute |
+| `picked_up_at` | `TIMESTAMP WITH TIME ZONE` | Nullable | - | picked_up_at attribute |
+| `picked_up_by_name` | `VARCHAR` | Nullable | - | picked_up_by_name attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 5. `bundles`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `bundle_product_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (bundle_product) |
+| `component_product_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (component_product) |
+| `quantity` | `INTEGER` | **NOT NULL** | `1` | quantity attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 6. `categories`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `parent_id` | `UUID` | Nullable | - | Foreign Key reference (parent) |
+| `slug` | `VARCHAR` | **NOT NULL** | - | slug attribute |
+| `name` | `VARCHAR` | **NOT NULL** | - | name attribute |
+| `description` | `TEXT` | Nullable | - | description attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 7. `channel_sync_logs`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `channel_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (channel) |
+| `sync_type` | `VARCHAR` | **NOT NULL** | - | sync_type attribute |
+| `status` | `VARCHAR` | **NOT NULL** | - | Status state enum |
+| `details` | `JSONB` | Nullable | `'{}'` | details attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 8. `channels`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `code` | `VARCHAR` | **NOT NULL** | - | code attribute |
+| `name` | `VARCHAR` | **NOT NULL** | - | name attribute |
+| `type` | `VARCHAR` | **NOT NULL** | - | type attribute |
+| `is_active` | `BOOLEAN` | **NOT NULL** | `true` | is_active attribute |
+| `credentials` | `JSONB` | Nullable | `'{}'` | credentials attribute |
+| `settings` | `JSONB` | Nullable | `'{"auto_fulfill": true, "auto_sync_stock": true, "stock_buffer_percentage": 0}'` | settings attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 9. `coupon_redemptions`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `promotion_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (promotion) |
+| `order_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (order) |
+| `customer_id` | `UUID` | Nullable | - | Foreign Key reference (customer) |
+| `discount_applied` | `NUMERIC` | **NOT NULL** | - | discount_applied attribute |
+| `redeemed_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | redeemed_at attribute |
+
+### 10. `credit_notes`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `invoice_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (invoice) |
+| `credit_note_number` | `VARCHAR` | **NOT NULL** | - | credit_note_number attribute |
+| `amount` | `NUMERIC` | **NOT NULL** | - | Financial / monetary value |
+| `pdf_url` | `TEXT` | Nullable | - | pdf_url attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 11. `customers`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `email` | `VARCHAR` | **NOT NULL** | - | email attribute |
+| `first_name` | `VARCHAR` | Nullable | - | first_name attribute |
+| `last_name` | `VARCHAR` | Nullable | - | last_name attribute |
+| `phone` | `VARCHAR` | Nullable | - | phone attribute |
+| `shipping_addresses` | `JSONB` | Nullable | `'[]'` | shipping_addresses attribute |
+| `is_blacklisted` | `BOOLEAN` | **NOT NULL** | `false` | is_blacklisted attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 12. `fulfillment_items`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `fulfillment_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (fulfillment) |
+| `order_item_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (order_item) |
+| `quantity` | `INTEGER` | **NOT NULL** | - | quantity attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 13. `fulfillments`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `order_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (order) |
+| `warehouse_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (warehouse) |
+| `status` | `fulfillment_status` | **NOT NULL** | `'PENDING'` | Status state enum |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 14. `inventory_adjustments`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `warehouse_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (warehouse) |
+| `product_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (product) |
+| `quantity_delta` | `INTEGER` | **NOT NULL** | - | quantity_delta attribute |
+| `reason` | `VARCHAR` | **NOT NULL** | - | reason attribute |
+| `adjusted_by` | `UUID` | Nullable | - | adjusted_by attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 15. `inventory_items`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `warehouse_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (warehouse) |
+| `product_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (product) |
+| `on_hand` | `INTEGER` | **NOT NULL** | `0` | on_hand attribute |
+| `reserved` | `INTEGER` | **NOT NULL** | `0` | reserved attribute |
+| `safety_stock` | `INTEGER` | **NOT NULL** | `0` | safety_stock attribute |
+| `damaged` | `INTEGER` | **NOT NULL** | `0` | damaged attribute |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 16. `inventory_reservations`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `order_id` | `UUID` | Nullable | - | Foreign Key reference (order) |
+| `product_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (product) |
+| `warehouse_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (warehouse) |
+| `quantity` | `INTEGER` | **NOT NULL** | - | quantity attribute |
+| `expires_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | - | expires_at attribute |
+| `is_released` | `BOOLEAN` | **NOT NULL** | `false` | is_released attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 17. `invoices`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `order_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (order) |
+| `invoice_number` | `VARCHAR` | **NOT NULL** | - | invoice_number attribute |
+| `pdf_url` | `TEXT` | Nullable | - | pdf_url attribute |
+| `tax_breakdown` | `JSONB` | **NOT NULL** | `'{}'` | tax_breakdown attribute |
+| `total_amount` | `NUMERIC` | **NOT NULL** | - | Financial / monetary value |
+| `currency` | `VARCHAR` | **NOT NULL** | - | currency attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 18. `order_holds`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `order_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (order) |
+| `reason` | `VARCHAR` | **NOT NULL** | - | reason attribute |
+| `is_resolved` | `BOOLEAN` | **NOT NULL** | `false` | is_resolved attribute |
+| `resolved_by` | `UUID` | Nullable | - | resolved_by attribute |
+| `resolved_at` | `TIMESTAMP WITH TIME ZONE` | Nullable | - | resolved_at attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 19. `order_items`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `order_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (order) |
+| `product_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (product) |
+| `sku` | `VARCHAR` | **NOT NULL** | - | sku attribute |
+| `title` | `VARCHAR` | **NOT NULL** | - | title attribute |
+| `quantity` | `INTEGER` | **NOT NULL** | - | quantity attribute |
+| `unit_price` | `NUMERIC` | **NOT NULL** | - | Financial / monetary value |
+| `tax_amount` | `NUMERIC` | **NOT NULL** | `0` | Financial / monetary value |
+| `discount_amount` | `NUMERIC` | **NOT NULL** | `0` | Financial / monetary value |
+| `total_price` | `NUMERIC` | **NOT NULL** | - | Financial / monetary value |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 20. `order_state_history`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `order_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (order) |
+| `previous_state` | `order_status` | Nullable | - | previous_state attribute |
+| `new_state` | `order_status` | **NOT NULL** | - | new_state attribute |
+| `transition_reason` | `VARCHAR` | Nullable | - | transition_reason attribute |
+| `triggered_by` | `UUID` | Nullable | - | triggered_by attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 21. `orders`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `channel_id` | `UUID` | Nullable | - | Foreign Key reference (channel) |
+| `channel_order_id` | `VARCHAR` | Nullable | - | Foreign Key reference (channel_order) |
+| `order_number` | `VARCHAR` | **NOT NULL** | - | order_number attribute |
+| `customer_id` | `UUID` | Nullable | - | Foreign Key reference (customer) |
+| `status` | `order_status` | **NOT NULL** | `'PENDING'` | Status state enum |
+| `payment_status` | `payment_status` | **NOT NULL** | `'PENDING'` | Status state enum |
+| `currency` | `VARCHAR` | **NOT NULL** | `'USD'` | currency attribute |
+| `subtotal` | `NUMERIC` | **NOT NULL** | `0` | Financial / monetary value |
+| `tax_total` | `NUMERIC` | **NOT NULL** | `0` | Financial / monetary value |
+| `discount_total` | `NUMERIC` | **NOT NULL** | `0` | Financial / monetary value |
+| `shipping_total` | `NUMERIC` | **NOT NULL** | `0` | Financial / monetary value |
+| `total_amount` | `NUMERIC` | **NOT NULL** | - | Financial / monetary value |
+| `shipping_address` | `JSONB` | **NOT NULL** | - | shipping_address attribute |
+| `billing_address` | `JSONB` | **NOT NULL** | - | billing_address attribute |
+| `is_cod` | `BOOLEAN` | **NOT NULL** | `false` | is_cod attribute |
+| `idempotency_key` | `VARCHAR` | Nullable | - | idempotency_key attribute |
+| `metadata` | `JSONB` | Nullable | `'{}'` | Extensible JSONB metadata |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 22. `outbox_events`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `aggregate_type` | `VARCHAR` | **NOT NULL** | - | aggregate_type attribute |
+| `aggregate_id` | `VARCHAR` | **NOT NULL** | - | Foreign Key reference (aggregate) |
+| `event_type` | `VARCHAR` | **NOT NULL** | - | event_type attribute |
+| `payload` | `JSONB` | **NOT NULL** | - | payload attribute |
+| `status` | `outbox_status` | **NOT NULL** | `'PENDING'` | Status state enum |
+| `retry_count` | `INTEGER` | **NOT NULL** | `0` | retry_count attribute |
+| `last_error` | `TEXT` | Nullable | - | last_error attribute |
+| `scheduled_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | scheduled_at attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 23. `payment_reconciliations`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `gateway` | `VARCHAR` | **NOT NULL** | - | gateway attribute |
+| `settlement_id` | `VARCHAR` | **NOT NULL** | - | Foreign Key reference (settlement) |
+| `total_expected` | `NUMERIC` | **NOT NULL** | - | Financial / monetary value |
+| `total_settled` | `NUMERIC` | **NOT NULL** | - | Financial / monetary value |
+| `discrepancy` | `NUMERIC` | **NOT NULL** | `0` | discrepancy attribute |
+| `status` | `VARCHAR` | **NOT NULL** | `'MATCHED'` | Status state enum |
+| `reconciled_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | reconciled_at attribute |
+
+### 24. `payments`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `order_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (order) |
+| `payment_method` | `VARCHAR` | **NOT NULL** | - | payment_method attribute |
+| `gateway` | `VARCHAR` | **NOT NULL** | - | gateway attribute |
+| `gateway_transaction_id` | `VARCHAR` | Nullable | - | Foreign Key reference (gateway_transaction) |
+| `amount` | `NUMERIC` | **NOT NULL** | - | Financial / monetary value |
+| `currency` | `VARCHAR` | **NOT NULL** | - | currency attribute |
+| `status` | `payment_status` | **NOT NULL** | `'PENDING'` | Status state enum |
+| `idempotency_key` | `VARCHAR` | **NOT NULL** | - | idempotency_key attribute |
+| `metadata` | `JSONB` | Nullable | `'{}'` | Extensible JSONB metadata |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 25. `permissions`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `code` | `VARCHAR` | **NOT NULL** | - | code attribute |
+| `description` | `VARCHAR` | **NOT NULL** | - | description attribute |
+| `module` | `VARCHAR` | **NOT NULL** | - | module attribute |
+
+### 26. `product_variants`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `product_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (product) |
+| `variant_sku` | `VARCHAR` | **NOT NULL** | - | variant_sku attribute |
+| `title` | `VARCHAR` | **NOT NULL** | - | title attribute |
+| `attributes` | `JSONB` | **NOT NULL** | `'{}'` | attributes attribute |
+| `price_override` | `NUMERIC` | Nullable | - | Financial / monetary value |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 27. `products`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `category_id` | `UUID` | Nullable | - | Foreign Key reference (category) |
+| `sku` | `VARCHAR` | **NOT NULL** | - | sku attribute |
+| `name` | `VARCHAR` | **NOT NULL** | - | name attribute |
+| `description` | `TEXT` | Nullable | - | description attribute |
+| `is_bundle` | `BOOLEAN` | **NOT NULL** | `false` | is_bundle attribute |
+| `is_active` | `BOOLEAN` | **NOT NULL** | `true` | is_active attribute |
+| `price_base` | `NUMERIC` | **NOT NULL** | - | Financial / monetary value |
+| `currency` | `VARCHAR` | **NOT NULL** | `'USD'` | currency attribute |
+| `weight_grams` | `NUMERIC` | Nullable | `0` | weight_grams attribute |
+| `dimensions_cm` | `JSONB` | Nullable | `'{"width": 0, "height": 0, "length": 0}'` | dimensions_cm attribute |
+| `metadata` | `JSONB` | Nullable | `'{}'` | Extensible JSONB metadata |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 28. `promotions`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `code` | `VARCHAR` | **NOT NULL** | - | code attribute |
+| `title` | `VARCHAR` | **NOT NULL** | - | title attribute |
+| `discount_type` | `discount_type` | **NOT NULL** | - | discount_type attribute |
+| `discount_value` | `NUMERIC` | **NOT NULL** | - | discount_value attribute |
+| `min_order_value` | `NUMERIC` | Nullable | `0` | min_order_value attribute |
+| `max_discount_amount` | `NUMERIC` | Nullable | - | Financial / monetary value |
+| `usage_limit_total` | `INTEGER` | Nullable | - | Financial / monetary value |
+| `usage_limit_per_customer` | `INTEGER` | Nullable | `1` | usage_limit_per_customer attribute |
+| `current_redemptions` | `INTEGER` | **NOT NULL** | `0` | current_redemptions attribute |
+| `starts_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | starts_at attribute |
+| `ends_at` | `TIMESTAMP WITH TIME ZONE` | Nullable | - | ends_at attribute |
+| `is_active` | `BOOLEAN` | **NOT NULL** | `true` | is_active attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 29. `purchase_orders`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `vendor_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (vendor) |
+| `po_number` | `VARCHAR` | **NOT NULL** | - | po_number attribute |
+| `status` | `VARCHAR` | **NOT NULL** | `'DRAFT'` | Status state enum |
+| `total_cost` | `NUMERIC` | **NOT NULL** | - | Financial / monetary value |
+| `expected_delivery_date` | `DATE` | Nullable | - | expected_delivery_date attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 30. `refunds`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `payment_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (payment) |
+| `order_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (order) |
+| `amount` | `NUMERIC` | **NOT NULL** | - | Financial / monetary value |
+| `reason` | `VARCHAR` | Nullable | - | reason attribute |
+| `gateway_refund_id` | `VARCHAR` | Nullable | - | Foreign Key reference (gateway_refund) |
+| `status` | `VARCHAR` | **NOT NULL** | `'SUCCEEDED'` | Status state enum |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 31. `return_items`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `return_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (return) |
+| `order_item_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (order_item) |
+| `quantity` | `INTEGER` | **NOT NULL** | - | quantity attribute |
+| `qa_grade` | `qa_grade` | Nullable | - | qa_grade attribute |
+| `is_restocked` | `BOOLEAN` | **NOT NULL** | `false` | is_restocked attribute |
+| `inspected_at` | `TIMESTAMP WITH TIME ZONE` | Nullable | - | inspected_at attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 32. `returns`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `order_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (order) |
+| `rma_number` | `VARCHAR` | **NOT NULL** | - | rma_number attribute |
+| `status` | `rma_status` | **NOT NULL** | `'REQUESTED'` | Status state enum |
+| `reason` | `VARCHAR` | **NOT NULL** | - | reason attribute |
+| `reverse_tracking_number` | `VARCHAR` | Nullable | - | reverse_tracking_number attribute |
+| `reverse_label_url` | `TEXT` | Nullable | - | reverse_label_url attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 33. `role_permissions`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `role_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (role) |
+| `permission_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (permission) |
+
+### 34. `roles`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | Nullable | - | Tenant Isolation Key (RLS scoped FK) |
+| `name` | `VARCHAR` | **NOT NULL** | - | name attribute |
+| `description` | `VARCHAR` | Nullable | - | description attribute |
+| `is_system_role` | `BOOLEAN` | **NOT NULL** | `false` | is_system_role attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 35. `shipment_tracking_events`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `shipment_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (shipment) |
+| `checkpoint_status` | `VARCHAR` | **NOT NULL** | - | Status state enum |
+| `location` | `VARCHAR` | Nullable | - | location attribute |
+| `event_timestamp` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | - | event_timestamp attribute |
+| `raw_payload` | `JSONB` | Nullable | `'{}'` | raw_payload attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 36. `shipments`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `fulfillment_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (fulfillment) |
+| `carrier` | `VARCHAR` | **NOT NULL** | - | carrier attribute |
+| `service_tier` | `VARCHAR` | Nullable | `'Standard'` | service_tier attribute |
+| `tracking_number` | `VARCHAR` | **NOT NULL** | - | tracking_number attribute |
+| `tracking_url` | `TEXT` | Nullable | - | tracking_url attribute |
+| `shipping_label_url` | `TEXT` | Nullable | - | shipping_label_url attribute |
+| `status` | `shipment_status` | **NOT NULL** | `'CREATED'` | Status state enum |
+| `shipped_at` | `TIMESTAMP WITH TIME ZONE` | Nullable | - | shipped_at attribute |
+| `delivered_at` | `TIMESTAMP WITH TIME ZONE` | Nullable | - | delivered_at attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 37. `tenant_configs`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `soft_hold_duration_minutes` | `INTEGER` | **NOT NULL** | `15` | soft_hold_duration_minutes attribute |
+| `auto_capture_payment` | `BOOLEAN` | **NOT NULL** | `true` | auto_capture_payment attribute |
+| `auto_route_fulfillment` | `BOOLEAN` | **NOT NULL** | `true` | auto_route_fulfillment attribute |
+| `enable_cod` | `BOOLEAN` | **NOT NULL** | `false` | enable_cod attribute |
+| `enable_bopis` | `BOOLEAN` | **NOT NULL** | `false` | enable_bopis attribute |
+| `webhook_secret` | `VARCHAR` | Nullable | - | webhook_secret attribute |
+| `notification_settings` | `JSONB` | Nullable | `'{"sms": false, "email": true, "whatsapp": false}'` | notification_settings attribute |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 38. `tenant_profiles`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `logo_url` | `TEXT` | Nullable | - | logo_url attribute |
+| `brand_color_primary` | `VARCHAR` | Nullable | `'#0F172A'` | brand_color_primary attribute |
+| `tax_identifier` | `VARCHAR` | Nullable | - | tax_identifier attribute |
+| `registered_address` | `JSONB` | Nullable | `'{}'` | registered_address attribute |
+| `support_email` | `VARCHAR` | Nullable | - | support_email attribute |
+| `support_phone` | `VARCHAR` | Nullable | - | support_phone attribute |
+| `custom_domain` | `VARCHAR` | Nullable | - | custom_domain attribute |
+| `is_custom_domain_verified` | `BOOLEAN` | Nullable | `false` | is_custom_domain_verified attribute |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 39. `tenant_quotas`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `max_orders_per_month` | `INTEGER` | **NOT NULL** | `10000` | max_orders_per_month attribute |
+| `max_skus` | `INTEGER` | **NOT NULL** | `5000` | max_skus attribute |
+| `max_warehouses` | `INTEGER` | **NOT NULL** | `5` | max_warehouses attribute |
+| `max_users` | `INTEGER` | **NOT NULL** | `10` | max_users attribute |
+| `max_connected_channels` | `INTEGER` | **NOT NULL** | `3` | max_connected_channels attribute |
+| `rate_limit_rpm` | `INTEGER` | **NOT NULL** | `1200` | rate_limit_rpm attribute |
+| `current_orders_this_month` | `INTEGER` | **NOT NULL** | `0` | current_orders_this_month attribute |
+| `quota_reset_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `(date_trunc('month', now()) + '1 mon')` | quota_reset_at attribute |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 40. `tenant_users`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `user_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (user) |
+| `role_id` | `UUID` | Nullable | - | Foreign Key reference (role) |
+| `role_name` | `VARCHAR` | **NOT NULL** | `'operator'` | role_name attribute |
+| `is_active` | `BOOLEAN` | **NOT NULL** | `true` | is_active attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 41. `tenants`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `slug` | `VARCHAR` | **NOT NULL** | - | slug attribute |
+| `name` | `VARCHAR` | **NOT NULL** | - | name attribute |
+| `legal_name` | `VARCHAR` | Nullable | - | legal_name attribute |
+| `status` | `tenant_status` | **NOT NULL** | `'PENDING'` | Status state enum |
+| `tier` | `tenant_tier` | **NOT NULL** | `'STARTER'` | tier attribute |
+| `primary_email` | `VARCHAR` | **NOT NULL** | - | primary_email attribute |
+| `primary_currency` | `VARCHAR` | **NOT NULL** | `'USD'` | primary_currency attribute |
+| `timezone` | `VARCHAR` | **NOT NULL** | `'UTC'` | timezone attribute |
+| `is_deleted` | `BOOLEAN` | **NOT NULL** | `false` | is_deleted attribute |
+| `deleted_at` | `TIMESTAMP WITH TIME ZONE` | Nullable | - | deleted_at attribute |
+| `metadata` | `JSONB` | Nullable | `'{}'` | Extensible JSONB metadata |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 42. `user_sessions`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `user_id` | `UUID` | **NOT NULL** | - | Foreign Key reference (user) |
+| `refresh_token_hash` | `VARCHAR` | **NOT NULL** | - | refresh_token_hash attribute |
+| `user_agent` | `TEXT` | Nullable | - | user_agent attribute |
+| `ip_address` | `VARCHAR` | Nullable | - | ip_address attribute |
+| `expires_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | - | expires_at attribute |
+| `is_revoked` | `BOOLEAN` | **NOT NULL** | `false` | is_revoked attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 43. `users`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `email` | `VARCHAR` | **NOT NULL** | - | email attribute |
+| `password_hash` | `VARCHAR` | **NOT NULL** | - | password_hash attribute |
+| `first_name` | `VARCHAR` | Nullable | - | first_name attribute |
+| `last_name` | `VARCHAR` | Nullable | - | last_name attribute |
+| `phone` | `VARCHAR` | Nullable | - | phone attribute |
+| `is_active` | `BOOLEAN` | **NOT NULL** | `true` | is_active attribute |
+| `is_verified` | `BOOLEAN` | **NOT NULL** | `false` | is_verified attribute |
+| `failed_login_attempts` | `INTEGER` | **NOT NULL** | `0` | failed_login_attempts attribute |
+| `locked_until` | `TIMESTAMP WITH TIME ZONE` | Nullable | - | locked_until attribute |
+| `last_login_at` | `TIMESTAMP WITH TIME ZONE` | Nullable | - | last_login_at attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Last update timestamp |
+
+### 44. `vendors`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `code` | `VARCHAR` | **NOT NULL** | - | code attribute |
+| `name` | `VARCHAR` | **NOT NULL** | - | name attribute |
+| `email` | `VARCHAR` | **NOT NULL** | - | email attribute |
+| `phone` | `VARCHAR` | Nullable | - | phone attribute |
+| `commission_percentage` | `NUMERIC` | Nullable | `0` | commission_percentage attribute |
+| `is_active` | `BOOLEAN` | **NOT NULL** | `true` | is_active attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
+
+### 45. `warehouses`
+
+| Column | Data Type | Nullable | Default Value | Description / Constraint |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `UUID` | **NOT NULL** | `gen_random_uuid()` | Primary Key (UUID) |
+| `tenant_id` | `UUID` | **NOT NULL** | - | Tenant Isolation Key (RLS scoped FK) |
+| `code` | `VARCHAR` | **NOT NULL** | - | code attribute |
+| `name` | `VARCHAR` | **NOT NULL** | - | name attribute |
+| `is_active` | `BOOLEAN` | **NOT NULL** | `true` | is_active attribute |
+| `is_retail_store` | `BOOLEAN` | **NOT NULL** | `false` | is_retail_store attribute |
+| `priority` | `INTEGER` | **NOT NULL** | `1` | priority attribute |
+| `address` | `JSONB` | **NOT NULL** | - | address attribute |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **NOT NULL** | `now()` | Record creation timestamp |
 

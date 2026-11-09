@@ -1,4 +1,6 @@
 const path = require('path');
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
@@ -24,8 +26,8 @@ async function runSeed() {
     // 1. Create Default Master Tenant
     console.log('Inserting default tenant...');
     const tenantRes = await client.query(`
-      INSERT INTO tenants (slug, name, status, plan, currency, timezone)
-      VALUES ('demo-corp', 'Demo Global Retail Corp', 'ACTIVE', 'enterprise', 'USD', 'UTC')
+      INSERT INTO tenants (slug, name, primary_email, status, tier, primary_currency, timezone)
+      VALUES ('demo-corp', 'Demo Global Retail Corp', 'admin@nexora.io', 'ACTIVE', 'ENTERPRISE', 'USD', 'UTC')
       ON CONFLICT (slug) DO UPDATE SET updated_at = NOW()
       RETURNING id;
     `);
@@ -34,7 +36,26 @@ async function runSeed() {
     // 2. Set Tenant Context for RLS
     await client.query(`SET LOCAL app.current_tenant_id = '${tenantId}';`);
 
-    // 3. Create Default Admin User
+    // 3. Create Tenant Profile & Config
+    await client.query(`
+      INSERT INTO tenant_profiles (tenant_id, brand_color_primary, support_email)
+      VALUES ($1, '#0F172A', 'support@democorp.com')
+      ON CONFLICT (tenant_id) DO NOTHING;
+    `, [tenantId]);
+
+    await client.query(`
+      INSERT INTO tenant_quotas (tenant_id, max_orders_per_month, max_skus)
+      VALUES ($1, 50000, 20000)
+      ON CONFLICT (tenant_id) DO NOTHING;
+    `, [tenantId]);
+
+    await client.query(`
+      INSERT INTO tenant_configs (tenant_id, soft_hold_duration_minutes, auto_capture_payment)
+      VALUES ($1, 15, true)
+      ON CONFLICT (tenant_id) DO NOTHING;
+    `, [tenantId]);
+
+    // 4. Create Default Admin User
     console.log('Inserting admin user...');
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash('Admin@Nexora2026', salt);
@@ -47,14 +68,22 @@ async function runSeed() {
     `, [passwordHash]);
     const userId = userRes.rows[0].id;
 
-    // 4. Link User to Tenant as Owner
+    // 5. Link User to Tenant
     await client.query(`
-      INSERT INTO tenant_users (tenant_id, user_id, role, permissions)
-      VALUES ($1, $2, 'owner', ARRAY['*'])
+      INSERT INTO tenant_users (tenant_id, user_id, role_name)
+      VALUES ($1, $2, 'owner')
       ON CONFLICT (tenant_id, user_id) DO NOTHING;
     `, [tenantId, userId]);
 
-    // 5. Create Sample Warehouse
+    // 6. Create Default Sales Channel (Shopify Connector)
+    console.log('Inserting sample Shopify channel...');
+    await client.query(`
+      INSERT INTO channels (tenant_id, code, name, type, is_active)
+      VALUES ($1, 'SHOPIFY-MAIN', 'Official Shopify Brand Store', 'shopify', true)
+      ON CONFLICT (tenant_id, code) DO NOTHING;
+    `, [tenantId]);
+
+    // 7. Create Sample Warehouse
     console.log('Inserting sample warehouse...');
     const whRes = await client.query(`
       INSERT INTO warehouses (tenant_id, code, name, address)
@@ -64,7 +93,7 @@ async function runSeed() {
     `, [tenantId]);
     const warehouseId = whRes.rows[0].id;
 
-    // 6. Create Sample Category & Product
+    // 8. Create Sample Category & Product
     console.log('Inserting sample product and inventory...');
     const catRes = await client.query(`
       INSERT INTO categories (tenant_id, slug, name)
@@ -82,7 +111,7 @@ async function runSeed() {
     `, [tenantId, categoryId]);
     const productId = prodRes.rows[0].id;
 
-    // 7. Initialize Stock
+    // 9. Initialize Stock
     await client.query(`
       INSERT INTO inventory_items (tenant_id, warehouse_id, product_id, on_hand, reserved, safety_stock)
       VALUES ($1, $2, $3, 1000, 0, 50)
@@ -104,4 +133,3 @@ async function runSeed() {
 }
 
 runSeed();
-
