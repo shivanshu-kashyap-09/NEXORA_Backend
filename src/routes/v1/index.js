@@ -1,5 +1,8 @@
 const express = require('express');
 const router = express.Router();
-// Import module routes here (e.g., const orderRoutes = require('../../modules/order').routes;)
-// router.use('/orders', orderRoutes);
+const identityModule = require('../../modules/identity');
+
+// Mount Authentication & Identity Routes
+router.use('/auth', identityModule.routes);
+
 module.exports = router;
