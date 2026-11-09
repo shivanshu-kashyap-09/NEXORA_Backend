@@ -11,6 +11,7 @@ const orderModule = require('../../modules/order');
 const paymentModule = require('../../modules/payment');
 const fulfillmentModule = require('../../modules/fulfillment');
 const shipmentModule = require('../../modules/shipment');
+const refundModule = require('../../modules/refund');
 
 // Mount Authentication & Identity Routes
 router.use('/auth', identityModule.routes);
@@ -44,5 +45,8 @@ router.use('/fulfillments', fulfillmentModule.routes);
 
 // Mount 3PL Shipments & Tracking Routes (/shipments)
 router.use('/shipments', shipmentModule.routes);
+
+// Mount Reverse Logistics, Returns & RMA Routes (/returns)
+router.use('/returns', refundModule.routes);
 
 module.exports = router;
