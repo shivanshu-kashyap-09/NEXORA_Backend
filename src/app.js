@@ -64,7 +64,7 @@ app.get('/api-docs.json', (req, res) => {
  *                   type: string
  *                   example: "req_01J8ZX11234AB"
  */
-app.get('/', (req, res) => {
+app.get(['/', '/api/v1'], (req, res) => {
   res.json({
     name: 'NEXORA OMS Engine',
     version: environment.app_version,
@@ -113,7 +113,7 @@ app.get('/', (req, res) => {
  *                   type: string
  *                   example: "req_01J8ZX11234AB"
  */
-app.get(['/health', '/live'], (req, res) => {
+app.get(['/health', '/live', '/api/v1/health', '/api/v1/live'], (req, res) => {
   res.json({
     status: 'UP',
     statusCode: 200,
@@ -185,7 +185,7 @@ app.get(['/health', '/live'], (req, res) => {
  *                       type: string
  *                       example: DOWN
  */
-app.get('/ready', async (req, res) => {
+app.get(['/ready', '/api/v1/ready'], async (req, res) => {
   const dbStatus = await testDbConnection();
   const redisStatus = await testRedisConnection();
 

@@ -16,12 +16,16 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: `http://localhost:${environment.port}/api/v1`,
-      description: 'Local Development Server (API v1)',
+      url: `http://localhost:${environment.port}`,
+      description: 'Local Server (Root)',
     },
     {
-      url: `http://localhost:${environment.port}`,
-      description: 'Root Server',
+      url: `http://localhost:${environment.port}/api/v1`,
+      description: 'API v1 Base Server',
+    },
+    {
+      url: '/',
+      description: 'Relative Server Path',
     },
   ],
   components: {
