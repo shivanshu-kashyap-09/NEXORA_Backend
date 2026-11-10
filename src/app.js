@@ -4,7 +4,7 @@ const cors = require('cors');
 const environment = require('./config/environment');
 const { swaggerUi, swaggerSpec } = require('./config/swagger');
 const routes = require('./routes/v1');
-const { correlationId, errorHandler } = require('./shared/middleware');
+const { correlationId, errorHandler, rateLimiter } = require('./shared/middleware');
 const { NotFoundError } = require('./shared/errors');
 const { testDbConnection } = require('./config/database');
 const { testRedisConnection } = require('./config/redis');
@@ -14,6 +14,20 @@ const app = express();
 // Security Headers & Cross-Origin Resource Sharing
 app.use(helmet());
 app.use(cors({ origin: environment.cors_origin, credentials: true }));
+
+let totalRequests = 0;
+let totalErrors = 0;
+
+// Request Metrics Middleware
+app.use((req, res, next) => {
+  totalRequests++;
+  res.on('finish', () => {
+    if (res.statusCode >= 500) {
+      totalErrors++;
+    }
+  });
+  next();
+});
 
 // Request Tracing & Correlation ID Injection
 app.use(correlationId);
@@ -185,7 +199,7 @@ app.get(['/health', '/live', '/api/v1/health', '/api/v1/live'], (req, res) => {
  *                       type: string
  *                       example: DOWN
  */
-app.get(['/ready', '/api/v1/ready'], async (req, res) => {
+app.get(['/ready', '/health/readiness', '/api/v1/ready', '/api/v1/health/readiness'], async (req, res) => {
   const dbStatus = await testDbConnection();
   const redisStatus = await testRedisConnection();
 
@@ -204,8 +218,57 @@ app.get(['/ready', '/api/v1/ready'], async (req, res) => {
   });
 });
 
-// Versioned API Gateway Routes
-app.use('/api/v1', routes);
+/**
+ * @openapi
+ * /metrics:
+ *   get:
+ *     summary: Prometheus Observability Metrics
+ *     description: Standard Prometheus text exposition format exposing system memory, uptime, and request counters.
+ *     tags:
+ *       - System Probes
+ *     responses:
+ *       200:
+ *         description: Prometheus format metrics
+ *         content:
+ *           text/plain:
+ *             schema:
+ *               type: string
+ */
+app.get(['/metrics', '/api/v1/metrics'], (req, res) => {
+  const mem = process.memoryUsage();
+  const uptime = process.uptime();
+  const metrics = [
+    '# HELP process_uptime_seconds Total Node.js process uptime in seconds',
+    '# TYPE process_uptime_seconds gauge',
+    `process_uptime_seconds ${uptime.toFixed(2)}`,
+    '',
+    '# HELP process_resident_memory_bytes Resident Set Size (RSS) memory in bytes',
+    '# TYPE process_resident_memory_bytes gauge',
+    `process_resident_memory_bytes ${mem.rss}`,
+    '',
+    '# HELP process_heap_total_bytes Total process heap memory in bytes',
+    '# TYPE process_heap_total_bytes gauge',
+    `process_heap_total_bytes ${mem.heapTotal}`,
+    '',
+    '# HELP process_heap_used_bytes Used process heap memory in bytes',
+    '# TYPE process_heap_used_bytes gauge',
+    `process_heap_used_bytes ${mem.heapUsed}`,
+    '',
+    '# HELP nexora_http_requests_total Total number of HTTP requests processed',
+    '# TYPE nexora_http_requests_total counter',
+    `nexora_http_requests_total ${totalRequests}`,
+    '',
+    '# HELP nexora_http_errors_total Total number of 5xx HTTP server errors',
+    '# TYPE nexora_http_errors_total counter',
+    `nexora_http_errors_total ${totalErrors}`,
+  ].join('\n');
+
+  res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+  res.send(metrics);
+});
+
+// Versioned API Gateway Routes with Sliding-Window Rate Limiting
+app.use('/api/v1', rateLimiter(), routes);
 
 // Handle 404 Not Found
 app.use((req, res, next) => {
