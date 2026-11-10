@@ -15,6 +15,7 @@ const refundModule = require('../../modules/refund');
 const omnichannelModule = require('../../modules/omnichannel');
 const promotionModule = require('../../modules/promotion');
 const eventModule = require('../../modules/event');
+const vendorModule = require('../../modules/vendor');
 
 // Mount Authentication & Identity Routes
 router.use('/auth', identityModule.routes);
@@ -60,5 +61,11 @@ router.use('/promotions', promotionModule.routes);
 
 // Mount Transactional Outbox & Event Bus Routes (/events)
 router.use('/events', eventModule.routes);
+
+// Mount Vendor Management Routes (/vendors)
+router.use('/vendors', vendorModule.vendorRoutes);
+
+// Mount Purchase Orders Routes (/purchase-orders)
+router.use('/purchase-orders', vendorModule.poRoutes);
 
 module.exports = router;
