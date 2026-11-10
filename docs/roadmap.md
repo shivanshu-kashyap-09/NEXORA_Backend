@@ -18,19 +18,19 @@
 [✓] Step 8:  Reverse Logistics, Returns & RMA Lifecycle (/returns)
 [✓] Step 9:  Omnichannel Retail Fulfillment — BOPIS & BORIS (/omnichannel)
 [✓] Step 10: Promotions, Discounts & Coupon Engine (/promotions)
-------------------------------------------------------------------------------------------------
-[ ] Step 11: Transactional Outbox Pattern & Event Publisher Engine (/events, outbox worker)
-[ ] Step 12: Vendor & Drop-Shipping Portal, Purchase Orders (PO) (/vendors, /purchase-orders)
-[ ] Step 13: Pre-Orders, Backorders & Priority Allocation Queue (/backorders)
-[ ] Step 14: Comprehensive Audit Logging & Security Compliance (/audit-logs)
-[ ] Step 15: Enterprise Analytics, Financial Reporting & Executive Metrics (/reports)
-[ ] Step 16: Automated System Webhooks & Event Subscription Hub (/webhooks)
-[ ] Step 17: Production Hardening, Rate Limiting, Observability & Docker CI/CD
+[✓] Step 11: Transactional Outbox Pattern & Event Publisher Engine (/events, outbox worker)
+[✓] Step 12: Vendor & Drop-Shipping Portal, Purchase Orders (PO) (/vendors, /purchase-orders)
+[✓] Step 13: Pre-Orders, Backorders & Priority Allocation Queue (/backorders)
+[✓] Step 14: Comprehensive Audit Logging & Security Compliance (/audit-logs)
+[✓] Step 15: Enterprise Analytics, Financial Reporting & Executive Metrics (/reports)
+[✓] Step 16: Automated System Webhooks & Event Subscription Hub (/webhooks)
+[✓] Step 17: Production Hardening, Rate Limiting, Observability & Docker CI/CD
 ```
 
-* **Current Documented Swagger Endpoints:** `66` endpoints live in Swagger UI (`/api-docs`).
-* **Active Database:** Supabase PostgreSQL with RLS enabled across all 41 tenant tables.
+* **Current Documented Swagger Endpoints:** `117` endpoints live in Swagger UI (`/api-docs`).
+* **Active Database:** Supabase PostgreSQL with RLS enabled across all tenant tables.
 * **Distributed Locking:** Redis 7.x (`DistributedLock` with mutex redlock pattern).
+* **Master Smoke Test:** `scripts/test_full_system_smoke.js` (24/24 Domain & System Checks Passed).
 
 ---
 
