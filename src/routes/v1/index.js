@@ -19,6 +19,7 @@ const vendorModule = require('../../modules/vendor');
 const backorderModule = require('../../modules/backorder');
 const auditModule = require('../../modules/audit');
 const reportingModule = require('../../modules/reporting');
+const webhookModule = require('../../modules/webhook');
 
 // Mount Authentication & Identity Routes
 router.use('/auth', identityModule.routes);
@@ -79,5 +80,8 @@ router.use('/audit-logs', auditModule.routes);
 
 // Mount Enterprise Analytics & Financial Reporting Routes (/reports)
 router.use('/reports', reportingModule.routes);
+
+// Mount System Webhook Subscriptions & Delivery Hub Routes (/webhooks)
+router.use('/webhooks', webhookModule.webhookRoutes);
 
 module.exports = router;
