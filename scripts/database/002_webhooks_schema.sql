@@ -52,3 +52,4 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS idx_webhooks_tenant ON webhooks (tenant_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_tenant ON webhook_deliveries (tenant_id, webhook_id, created_at DESC);
+

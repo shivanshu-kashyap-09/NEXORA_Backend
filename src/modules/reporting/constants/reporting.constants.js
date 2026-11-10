@@ -11,3 +11,4 @@ const ReportGranularity = {
 module.exports = {
   ReportGranularity,
 };
+

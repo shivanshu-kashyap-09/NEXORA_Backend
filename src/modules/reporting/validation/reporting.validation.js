@@ -8,3 +8,4 @@ const dateRangeQuerySchema = z.object({
 module.exports = {
   dateRangeQuerySchema,
 };
+

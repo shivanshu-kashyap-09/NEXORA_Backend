@@ -44,3 +44,4 @@ services:
 volumes:
   nexora_redis_prod_data:
     driver: local
+
