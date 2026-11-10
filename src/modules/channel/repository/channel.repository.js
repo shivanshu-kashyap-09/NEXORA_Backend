@@ -214,6 +214,23 @@ const getChannelSyncLogs = async (tenantId, channelId, { page = 1, limit = 20 })
   });
 };
 
+/**
+ * Find active channel by type for tenant
+ */
+const findActiveChannelByType = async (tenantId, type) => {
+  return withTenantTransaction(tenantId, async (client) => {
+    const query = `
+      SELECT *
+      FROM channels
+      WHERE tenant_id = $1 AND type = $2 AND is_active = true
+      ORDER BY created_at DESC
+      LIMIT 1;
+    `;
+    const res = await client.query(query, [tenantId, type.toLowerCase()]);
+    return res.rows[0] || null;
+  });
+};
+
 module.exports = {
   createChannel,
   findChannelByCode,
@@ -222,5 +239,6 @@ module.exports = {
   updateChannel,
   recordSyncLog,
   getChannelSyncLogs,
+  findActiveChannelByType,
 };
 

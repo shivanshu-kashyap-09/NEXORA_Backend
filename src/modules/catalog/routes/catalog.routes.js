@@ -13,7 +13,7 @@ const authGuard = require('../../../shared/middleware/authGuard');
 const rbacGuard = require('../../../shared/middleware/rbacGuard');
 
 // Require authentication for all catalog endpoints
-router.use(authGuard);
+router.use(['/categories', '/products'], authGuard);
 
 /**
  * @openapi

@@ -11,7 +11,31 @@ const validateRequest = require('../../../shared/validators/validateRequest');
 const authGuard = require('../../../shared/middleware/authGuard');
 const rbacGuard = require('../../../shared/middleware/rbacGuard');
 
-// Require authentication for all channel endpoints
+/**
+ * @openapi
+ * /channels/shopify/webhook/{tenantId}:
+ *   post:
+ *     summary: Ingest Shopify Order Webhook
+ *     description: Public ingress webhook endpoint for Shopify. Validates X-Shopify-Hmac-Sha256 against tenant store secret, automatically resolves/registers SKUs in catalog, and ingests order into NEXORA canonical state machine.
+ *     tags:
+ *       - Sales Channels & Storefront Connectors
+ *     parameters:
+ *       - in: path
+ *         name: tenantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Tenant UUID receiving the Shopify order
+ *     responses:
+ *       200:
+ *         description: Shopify order webhook ingested successfully
+ *       401:
+ *         description: Invalid Shopify HMAC signature
+ */
+router.post('/shopify/webhook/:tenantId', channelController.handleShopifyWebhook);
+
+// Require authentication for all protected channel administration endpoints
 router.use(authGuard);
 
 /**

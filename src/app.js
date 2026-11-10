@@ -32,8 +32,15 @@ app.use((req, res, next) => {
 // Request Tracing & Correlation ID Injection
 app.use(correlationId);
 
-// Body Parsing Middleware with size limit mitigation
-app.use(express.json({ limit: '10mb' }));
+// Body Parsing Middleware with size limit mitigation & raw body preservation for HMAC webhooks (Shopify/Stripe/Razorpay)
+app.use(
+  express.json({
+    limit: '10mb',
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Swagger API Documentation UI & Raw JSON Spec

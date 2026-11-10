@@ -76,6 +76,20 @@ const getChannelSyncLogs = catchAsync(async (req, res) => {
   );
 });
 
+/**
+ * Ingest incoming Shopify Webhook (bypasses Bearer auth, validated by HMAC and tenant param)
+ */
+const handleShopifyWebhook = catchAsync(async (req, res) => {
+  const { tenantId } = req.params;
+  const result = await channelService.handleShopifyWebhook(tenantId, {
+    headers: req.headers,
+    rawBody: req.rawBody,
+    body: req.body,
+  });
+
+  return ApiResponse.success(res, result, 'Shopify webhook processed successfully');
+});
+
 module.exports = {
   createChannel,
   listChannels,
@@ -83,5 +97,6 @@ module.exports = {
   updateChannel,
   recordSyncLog,
   getChannelSyncLogs,
+  handleShopifyWebhook,
 };
 

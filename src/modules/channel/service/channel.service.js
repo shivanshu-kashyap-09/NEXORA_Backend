@@ -1,6 +1,8 @@
 const channelRepository = require('../repository/channel.repository');
-const { ConflictError, NotFoundError, BadRequestError } = require('../../../shared/errors');
+const { ConflictError, NotFoundError, BadRequestError, UnauthorizedError } = require('../../../shared/errors');
 const logger = require('../../../config/logger');
+const { verifyShopifyHmac, normalizeShopifyOrder } = require('../adapters/shopify.adapter');
+const orderService = require('../../order/service/order.service');
 
 /**
  * Mask sensitive credentials for safe API responses
@@ -109,6 +111,68 @@ const getChannelSyncLogs = async (tenantId, channelId, query) => {
   });
 };
 
+/**
+ * Process incoming Shopify Webhook with HMAC signature verification and canonical order ingestion
+ */
+const handleShopifyWebhook = async (tenantId, { headers, rawBody, body }) => {
+  const topic = headers['x-shopify-topic'] || 'orders/create';
+  const hmacHeader = headers['x-shopify-hmac-sha256'];
+  const shopDomain = headers['x-shopify-shop-domain'];
+
+  logger.info(`Received Shopify webhook topic: '${topic}' from domain: '${shopDomain}' for tenant: ${tenantId}`);
+
+  // Find active Shopify channel configuration for tenant
+  const channel = await channelRepository.findActiveChannelByType(tenantId, 'shopify');
+  if (!channel) {
+    logger.warn(`No active Shopify channel configured for tenant ${tenantId}. Skipping order ingestion.`);
+    return { status: 'skipped', message: 'No active Shopify channel registered for tenant' };
+  }
+
+  // Validate Shopify HMAC if secret is configured
+  const webhookSecret = channel.credentials?.webhook_secret ||
+    channel.credentials?.api_secret ||
+    channel.credentials?.secret_key;
+
+  if (webhookSecret && hmacHeader) {
+    const isValid = verifyShopifyHmac(rawBody, hmacHeader, webhookSecret);
+    if (!isValid) {
+      logger.error(`Shopify HMAC verification failed for tenant: ${tenantId}, domain: ${shopDomain}`);
+      throw new UnauthorizedError('Invalid Shopify HMAC signature');
+    }
+  } else if (!webhookSecret) {
+    logger.warn(`No webhook_secret found in Shopify channel credentials for tenant: ${tenantId}. Proceeding in development mode.`);
+  }
+
+  // Process supported topics
+  if (topic === 'orders/create' || topic === 'orders/paid') {
+    const canonicalOrder = await normalizeShopifyOrder(tenantId, channel.id, body);
+    const createdOrder = await orderService.createOrder(tenantId, null, canonicalOrder);
+
+    // Record channel sync audit log
+    await channelRepository.recordSyncLog({
+      tenantId,
+      channelId: channel.id,
+      syncType: 'ORDER_INGEST',
+      status: 'SUCCESS',
+      details: {
+        shopify_order_id: body.id,
+        shopify_order_name: body.name,
+        nexora_order_id: createdOrder.id,
+        nexora_order_number: createdOrder.order_number,
+      },
+    });
+
+    logger.info(`Shopify order ${body.name || body.id} ingested as NEXORA order ${createdOrder.order_number}`);
+    return {
+      status: 'success',
+      order_id: createdOrder.id,
+      order_number: createdOrder.order_number,
+    };
+  }
+
+  return { status: 'acknowledged', topic };
+};
+
 module.exports = {
   createChannel,
   getChannelById,
@@ -116,5 +180,6 @@ module.exports = {
   updateChannel,
   recordSyncLog,
   getChannelSyncLogs,
+  handleShopifyWebhook,
 };
 
