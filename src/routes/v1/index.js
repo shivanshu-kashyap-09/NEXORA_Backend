@@ -17,6 +17,7 @@ const promotionModule = require('../../modules/promotion');
 const eventModule = require('../../modules/event');
 const vendorModule = require('../../modules/vendor');
 const backorderModule = require('../../modules/backorder');
+const auditModule = require('../../modules/audit');
 
 // Mount Authentication & Identity Routes
 router.use('/auth', identityModule.routes);
@@ -71,5 +72,8 @@ router.use('/purchase-orders', vendorModule.poRoutes);
 
 // Mount Pre-Orders, Backorders & Priority Allocation Routes (/backorders)
 router.use('/backorders', backorderModule.routes);
+
+// Mount Comprehensive Audit Logging Routes (/audit-logs)
+router.use('/audit-logs', auditModule.routes);
 
 module.exports = router;
