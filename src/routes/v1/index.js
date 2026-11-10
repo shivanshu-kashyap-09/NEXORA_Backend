@@ -18,6 +18,7 @@ const eventModule = require('../../modules/event');
 const vendorModule = require('../../modules/vendor');
 const backorderModule = require('../../modules/backorder');
 const auditModule = require('../../modules/audit');
+const reportingModule = require('../../modules/reporting');
 
 // Mount Authentication & Identity Routes
 router.use('/auth', identityModule.routes);
@@ -75,5 +76,8 @@ router.use('/backorders', backorderModule.routes);
 
 // Mount Comprehensive Audit Logging Routes (/audit-logs)
 router.use('/audit-logs', auditModule.routes);
+
+// Mount Enterprise Analytics & Financial Reporting Routes (/reports)
+router.use('/reports', reportingModule.routes);
 
 module.exports = router;
