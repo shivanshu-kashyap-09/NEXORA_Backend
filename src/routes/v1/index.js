@@ -16,6 +16,7 @@ const omnichannelModule = require('../../modules/omnichannel');
 const promotionModule = require('../../modules/promotion');
 const eventModule = require('../../modules/event');
 const vendorModule = require('../../modules/vendor');
+const backorderModule = require('../../modules/backorder');
 
 // Mount Authentication & Identity Routes
 router.use('/auth', identityModule.routes);
@@ -67,5 +68,8 @@ router.use('/vendors', vendorModule.vendorRoutes);
 
 // Mount Purchase Orders Routes (/purchase-orders)
 router.use('/purchase-orders', vendorModule.poRoutes);
+
+// Mount Pre-Orders, Backorders & Priority Allocation Routes (/backorders)
+router.use('/backorders', backorderModule.routes);
 
 module.exports = router;
